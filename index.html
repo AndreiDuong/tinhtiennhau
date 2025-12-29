@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>App Tính Tiền Nhậu</title>
+    <style>
+        body { font-family: sans-serif; padding: 20px; background-color: #f4f4f9; }
+        .container { max-width: 500px; margin: auto; background: white; padding: 20px; border-radius: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        h2 { text-align: center; color: #d35400; }
+        input, button { width: 100%; padding: 12px; margin: 10px 0; border-radius: 8px; border: 1px solid #ccc; box-sizing: border-box; font-size: 16px; }
+        button { background-color: #27ae60; color: white; border: none; cursor: pointer; font-weight: bold; }
+        .person-row { display: flex; gap: 10px; margin-bottom: 10px; }
+        .person-row input:first-child { flex: 2; }
+        .person-row input:last-child { flex: 1; }
+        .result { margin-top: 20px; padding: 15px; background: #e8f6ef; border-radius: 10px; }
+        .mễ-text { color: #c0392b; font-size: 0.9em; font-style: italic; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>🍻 CHIA TIỀN NHẬU</h2>
+    
+    <label>Tổng hóa đơn (VNĐ):</label>
+    <input type="number" id="totalBill" placeholder="Ví dụ: 1000000">
+
+    <div id="peopleList">
+        <label>Danh sách (Tên - % tham gia):</label>
+        <div class="person-row">
+            <input type="text" placeholder="Tên người" class="p-name">
+            <input type="number" placeholder="%" class="p-percent" value="100">
+        </div>
+    </div>
+
+    <button onclick="addPerson()" style="background-color: #3498db;">+ Thêm người</button>
+    <button onclick="calculate()">TÍNH TIỀN</button>
+
+    <div id="resultArea" class="result" style="display: none;">
+        <strong>Kết quả chia bill:</strong>
+        <div id="resultDetails"></div>
+    </div>
+    
+    <p class="mễ-text">* Lưu ý: Nhập 0% nếu ai đó "Mễ" (từ chối) phần tiền này.</p>
+</div>
+
+<script>
+    function addPerson() {
+        const div = document.createElement('div');
+        div.className = 'person-row';
+        div.innerHTML = `
+            <input type="text" placeholder="Tên người" class="p-name">
+            <input type="number" placeholder="%" class="p-percent" value="100">
+        `;
+        document.getElementById('peopleList').appendChild(div);
+    }
+
+    function calculate() {
+        const totalBill = parseFloat(document.getElementById('totalBill').value);
+        const names = document.getElementsByClassName('p-name');
+        const percents = document.getElementsByClassName('p-percent');
+        
+        let totalPercent = 0;
+        let participants = [];
+
+        for (let i = 0; i < names.length; i++) {
+            let p = parseFloat(percents[i].value) || 0;
+            totalPercent += p;
+            participants.push({ name: names[i].value || `Người ${i+1}`, percent: p });
+        }
+
+        if (totalPercent === 0 || isNaN(totalBill)) {
+            alert("Vui lòng nhập số tiền và tỷ lệ hợp lệ!");
+            return;
+        }
+
+        let html = "<ul>";
+        participants.forEach(p => {
+            let amount = (p.percent / totalPercent) * totalBill;
+            html += `<li><strong>${p.name}</strong>: ${amount.toLocaleString()} VNĐ (${p.percent}%)</li>`;
+        });
+        html += "</ul>";
+
+        document.getElementById('resultDetails').innerHTML = html;
+        document.getElementById('resultArea').style.display = 'block';
+    }
+</script>
+
+</body>
+</html>
