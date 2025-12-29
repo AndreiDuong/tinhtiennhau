@@ -3,87 +3,140 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>App Tính Tiền Nhậu</title>
+    <title>Quản Lý Tiền Nhậu Theo Tháng</title>
     <style>
-        body { font-family: sans-serif; padding: 20px; background-color: #f4f4f9; }
-        .container { max-width: 500px; margin: auto; background: white; padding: 20px; border-radius: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
-        h2 { text-align: center; color: #d35400; }
-        input, button { width: 100%; padding: 12px; margin: 10px 0; border-radius: 8px; border: 1px solid #ccc; box-sizing: border-box; font-size: 16px; }
-        button { background-color: #27ae60; color: white; border: none; cursor: pointer; font-weight: bold; }
-        .person-row { display: flex; gap: 10px; margin-bottom: 10px; }
-        .person-row input:first-child { flex: 2; }
-        .person-row input:last-child { flex: 1; }
-        .result { margin-top: 20px; padding: 15px; background: #e8f6ef; border-radius: 10px; }
-        .mễ-text { color: #c0392b; font-size: 0.9em; font-style: italic; }
+        body { font-family: sans-serif; padding: 15px; background-color: #f0f2f5; line-height: 1.5; }
+        .container { max-width: 600px; margin: auto; background: white; padding: 20px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        h2, h3 { text-align: center; color: #2c3e50; }
+        input, button { width: 100%; padding: 12px; margin: 8px 0; border-radius: 8px; border: 1px solid #ddd; box-sizing: border-box; font-size: 16px; }
+        button { background-color: #27ae60; color: white; border: none; font-weight: bold; cursor: pointer; }
+        .btn-add { background-color: #3498db; margin-bottom: 20px; }
+        .btn-clear { background-color: #e74c3c; margin-top: 20px; }
+        .person-row { display: flex; gap: 10px; margin-bottom: 10px; border-bottom: 1px dashed #eee; padding-bottom: 10px; }
+        .history-item { background: #f8f9fa; padding: 10px; border-left: 5px solid #27ae60; margin-bottom: 10px; font-size: 14px; }
+        .summary-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        .summary-table th, .summary-table td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+        .summary-table th { background-color: #ecf0f1; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h2>🍻 CHIA TIỀN NHẬU</h2>
+    <h2>🍻 QUẢN LÝ NHẬU THEO THÁNG</h2>
+    
+    <label>Tên bữa nhậu / Ngày:</label>
+    <input type="text" id="billName" placeholder="VD: Nhậu Tất Niên - 25/12">
     
     <label>Tổng hóa đơn (VNĐ):</label>
-    <input type="number" id="totalBill" placeholder="Ví dụ: 1000000">
+    <input type="number" id="totalBill" placeholder="Nhập số tiền">
 
     <div id="peopleList">
-        <label>Danh sách (Tên - % tham gia):</label>
+        <label>Người tham gia (%):</label>
         <div class="person-row">
-            <input type="text" placeholder="Tên người" class="p-name">
+            <input type="text" placeholder="Tên" class="p-name">
             <input type="number" placeholder="%" class="p-percent" value="100">
         </div>
     </div>
 
-    <button onclick="addPerson()" style="background-color: #3498db;">+ Thêm người</button>
-    <button onclick="calculate()">TÍNH TIỀN</button>
+    <button class="btn-add" onclick="addPerson()">+ Thêm người</button>
+    <button onclick="calculateAndSave()">TÍNH & LƯU BILL</button>
 
-    <div id="resultArea" class="result" style="display: none;">
-        <strong>Kết quả chia bill:</strong>
-        <div id="resultDetails"></div>
+    <hr>
+
+    <h3>📊 TỔNG HỢP TRONG THÁNG</h3>
+    <div id="summaryArea">
+        <table class="summary-table">
+            <thead>
+                <tr><th>Tên</th><th>Tổng tiền phải trả</th></tr>
+            </thead>
+            <tbody id="summaryBody"></tbody>
+        </table>
     </div>
-    
-    <p class="mễ-text">* Lưu ý: Nhập 0% nếu ai đó "Mễ" (từ chối) phần tiền này.</p>
+
+    <h3>📜 LỊCH SỬ CHI TIẾT</h3>
+    <div id="historyLog"></div>
+
+    <button class="btn-clear" onclick="clearData()">XÓA DỮ LIỆU THÁNG MỚI</button>
 </div>
 
 <script>
+    let history = JSON.parse(localStorage.getItem('nhauHistory')) || [];
+
     function addPerson() {
         const div = document.createElement('div');
         div.className = 'person-row';
-        div.innerHTML = `
-            <input type="text" placeholder="Tên người" class="p-name">
-            <input type="number" placeholder="%" class="p-percent" value="100">
-        `;
+        div.innerHTML = `<input type="text" placeholder="Tên" class="p-name"><input type="number" placeholder="%" class="p-percent" value="100">`;
         document.getElementById('peopleList').appendChild(div);
     }
 
-    function calculate() {
+    function calculateAndSave() {
+        const billName = document.getElementById('billName').value || "Bữa nhậu không tên";
         const totalBill = parseFloat(document.getElementById('totalBill').value);
         const names = document.getElementsByClassName('p-name');
         const percents = document.getElementsByClassName('p-percent');
         
+        if (isNaN(totalBill)) return alert("Vui lòng nhập tiền!");
+
         let totalPercent = 0;
-        let participants = [];
+        let billDetails = [];
 
         for (let i = 0; i < names.length; i++) {
+            let n = names[i].value || `Khách ${i+1}`;
             let p = parseFloat(percents[i].value) || 0;
             totalPercent += p;
-            participants.push({ name: names[i].value || `Người ${i+1}`, percent: p });
+            billDetails.push({ name: n, percent: p });
         }
 
-        if (totalPercent === 0 || isNaN(totalBill)) {
-            alert("Vui lòng nhập số tiền và tỷ lệ hợp lệ!");
-            return;
-        }
+        const finalBill = {
+            id: Date.now(),
+            name: billName,
+            total: totalBill,
+            details: billDetails.map(item => ({
+                name: item.name,
+                amount: (item.percent / totalPercent) * totalBill
+            }))
+        };
 
-        let html = "<ul>";
-        participants.forEach(p => {
-            let amount = (p.percent / totalPercent) * totalBill;
-            html += `<li><strong>${p.name}</strong>: ${amount.toLocaleString()} VNĐ (${p.percent}%)</li>`;
-        });
-        html += "</ul>";
-
-        document.getElementById('resultDetails').innerHTML = html;
-        document.getElementById('resultArea').style.display = 'block';
+        history.push(finalBill);
+        localStorage.setItem('nhauHistory', JSON.stringify(history));
+        renderData();
+        alert("Đã lưu bill thành công!");
     }
+
+    function renderData() {
+        const historyLog = document.getElementById('historyLog');
+        const summaryBody = document.getElementById('summaryBody');
+        historyLog.innerHTML = "";
+        summaryBody.innerHTML = "";
+
+        let totals = {};
+
+        history.forEach(bill => {
+            let itemDiv = document.createElement('div');
+            itemDiv.className = 'history-item';
+            let detailStr = bill.details.map(d => `${d.name}: ${d.amount.toLocaleString()}đ`).join(', ');
+            itemDiv.innerHTML = `<strong>${bill.name}</strong>: ${bill.total.toLocaleString()}đ <br> <small>${detailStr}</small>`;
+            historyLog.prepend(itemDiv);
+
+            bill.details.forEach(d => {
+                totals[d.name] = (totals[d.name] || 0) + d.amount;
+            });
+        });
+
+        for (let name in totals) {
+            summaryBody.innerHTML += `<tr><td>${name}</td><td><strong>${totals[name].toLocaleString()} VNĐ</strong></td></tr>`;
+        }
+    }
+
+    function clearData() {
+        if(confirm("Bạn có chắc muốn xóa hết dữ liệu tháng này không?")) {
+            localStorage.removeItem('nhauHistory');
+            history = [];
+            renderData();
+        }
+    }
+
+    renderData(); // Chạy khi load trang
 </script>
 
 </body>
